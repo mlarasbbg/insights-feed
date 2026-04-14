@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Insights Feed</title>
+  <style>
+    :root {
+      --text: #2f2f2f;
+      --muted: #6b6b6b;
+      --border: #e5e5e5;
+      --link: #254e2b;
+      --bg: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 12px 16px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, sans-serif;
+      line-height: 1.4;
+    }
+
+    .feed {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .item {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .item:last-child {
+      border-bottom: none;
+    }
+
+    .title {
+      display: inline-block;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--link);
+      text-decoration: none;
+      margin-bottom: 4px;
+    }
+
+    .title:hover {
+      text-decoration: underline;
+    }
+
+    .date {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .status,
+    .error {
+      font-size: 14px;
+      color: var(--muted);
+      padding: 8px 0;
+    }
+
+    .error {
+      color: #a1260d;
+    }
+  </style>
+</head>
+<body>
+  <div id="feed" class="feed">
+    <div class="status">Loading insights...</div>
+  </div>
+
+  <script>
+    const apiUrl =
+      "https://sbbotanicgarden.org/wp-json/wp/v2/insight?per_page=5&_fields=link,date,title";
+
+    const feedEl = document.getElementById("feed");
+
+    async function loadFeed() {
+      try {
+        const response = await fetch(apiUrl, { cache: "no-store" });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const posts = await response.json();
+
+        if (!Array.isArray(posts) || posts.length === 0) {
+          feedEl.innerHTML = '<div class="status">No insights found.</div>';
+          return;
+        }
+
+        feedEl.innerHTML = posts
+          .map((post) => {
+            const title = post?.title?.rendered || "Untitled";
+            const link = post?.link || "#";
+            const date = post?.date
+              ? new Date(post.date).toLocaleDateString()
+              : "";
+
+            return `
+              <div class="item">
+                <a class="title" href="${link}" target="_blank" rel="noopener noreferrer">
+                  ${title}
+                </a>
+                <div class="date">${date}</div>
+              </div>
+            `;
+          })
+          .join("");
+      } catch (error) {
+        feedEl.innerHTML =
+          '<div class="error">Unable to load insights right now.</div>';
+        console.error("Feed load error:", error);
+      }
+    }
+
+    loadFeed();
+  </script>
+</body>
+</html>
