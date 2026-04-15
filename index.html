@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Insights Feed</title>
+
   <style>
     :root {
       --text: #2f2f2f;
@@ -29,16 +30,29 @@
     .feed {
       display: flex;
       flex-direction: column;
-      gap: 0;
     }
 
     .item {
+      display: flex;
+      gap: 12px;
       padding: 12px 0;
       border-bottom: 1px solid var(--border);
     }
 
     .item:last-child {
       border-bottom: none;
+    }
+
+    .thumb {
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    .content {
+      flex: 1;
     }
 
     .title {
@@ -71,6 +85,7 @@
     }
   </style>
 </head>
+
 <body>
   <div id="feed" class="feed">
     <div class="status">Loading insights...</div>
@@ -78,7 +93,7 @@
 
   <script>
     const apiUrl =
-      "https://sbbotanicgarden.org/wp-json/wp/v2/insight?per_page=5&_fields=link,date,title";
+      "https://sbbotanicgarden.org/wp-json/wp/v2/insight?per_page=5&_embed";
 
     const feedEl = document.getElementById("feed");
 
@@ -93,7 +108,8 @@
         const posts = await response.json();
 
         if (!Array.isArray(posts) || posts.length === 0) {
-          feedEl.innerHTML = '<div class="status">No insights found.</div>';
+          feedEl.innerHTML =
+            '<div class="status">No insights found.</div>';
           return;
         }
 
@@ -105,12 +121,19 @@
               ? new Date(post.date).toLocaleDateString()
               : "";
 
+            const image =
+              post?._embedded?.["wp:featuredmedia"]?.[0]?.source_url || "";
+
             return `
               <div class="item">
-                <a class="title" href="${link}" target="_blank" rel="noopener noreferrer">
-                  ${title}
-                </a>
-                <div class="date">${date}</div>
+                ${image ? `<img class="thumb" src="${image}" alt="thumbnail" />` : ""}
+                
+                <div class="content">
+                  <a class="title" href="${link}" target="_blank" rel="noopener noreferrer">
+                    ${title}
+                  </a>
+                  <div class="date">${date}</div>
+                </div>
               </div>
             `;
           })
