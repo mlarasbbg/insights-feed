@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>All Garden Sharepoint News Updates</title>
+
+  <style>
+    :root {
+      --text: #2f2f2f;
+      --muted: #6b6b6b;
+      --border: #e5e5e5;
+      --link: #254e2b;
+      --bg: #ffffff;
+      --badge-bg: #f3f4f2;
+      --button-bg: #254e2b;
+      --button-text: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 12px 16px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, sans-serif;
+      line-height: 1.4;
+    }
+
+    .topbar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    input {
+      flex: 1;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    button {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 4px;
+      background: #254E2B;
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    
+    button:hover:not(:disabled) {
+      background: #1f3f22;
+    }
+    
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .feed {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .item {
+      display: flex;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .item:last-child {
+      border-bottom: none;
+    }
+
+    .thumb {
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 4px;
+      flex-shrink: 0;
+      background: #f5f5f5;
+    }
+
+    .content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: var(--muted);
+      background: var(--badge-bg);
+      padding: 3px 6px;
+      border-radius: 999px;
+    }
+
+    .date {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .title {
+      display: inline-block;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--link);
+      text-decoration: none;
+    }
+
+    .title:hover {
+      text-decoration: underline;
+    }
+
+    .pager {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-top: 14px;
+      padding-top: 10px;
+    }
+
+    .page-count,
+    .status,
+    .error {
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .error {
+      color: #a1260d;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="topbar">
+    <input
+      id="searchInput"
+      type="search"
+      placeholder="Search updates by keyword or date..."
+    />
+    <button id="searchButton">Search</button>
+    <button id="clearButton">Clear</button>
+  </div>
+
+  <div id="feed" class="feed">
+    <div class="status">Loading updates...</div>
+  </div>
+
+  <div class="pager">
+    <button id="prevButton">Prev</button>
+    <div id="pageCount" class="page-count"></div>
+    <button id="nextButton">Next</button>
+  </div>
+
+  <script>
+    const apiUrl =
+  "https://mlarasbbg.github.io/insights-feed/sharepoint-news.json";
+
+
+    const feedEl = document.getElementById("feed");
+    const searchInput = document.getElementById("searchInput");
+    const searchButton = document.getElementById("searchButton");
+    const clearButton = document.getElementById("clearButton");
+    const prevButton = document.getElementById("prevButton");
+    const nextButton = document.getElementById("nextButton");
+    const pageCountEl = document.getElementById("pageCount");
+
+    let allPosts = [];
+    let filteredPosts = [];
+    let currentPage = 1;
+    const postsPerPage = 10;
+    let currentQuery = "";
+
+  async function loadFeed() {
+    try {
+      const response = await fetch(apiUrl, { cache: "no-store" });
+  
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+  
+      const posts = await response.json();
+  
+      allPosts = Array.isArray(posts)
+        ? posts
+            .map((post) => ({
+              title: post.title || "Untitled",
+              link: post.link || "#",
+              date: post.date || "",
+              readableDate: post.date ? new Date(post.date).toLocaleDateString() : "",
+              type: post.type || "SharePoint News",
+              image: post.image || "",
+              excerpt: post.excerpt || "",
+              searchableText: `${post.title || ""} ${post.excerpt || ""} ${post.date || ""}`.toLowerCase()
+            }))
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
+        : [];
+  
+      filteredPosts = allPosts;
+      renderPage();
+    } catch (error) {
+      feedEl.innerHTML =
+        '<div class="error">Unable to load updates right now.</div>';
+      console.error("Feed load error:", error);
+    }
+  }
+
+    function renderPage() {
+      const totalPages = Math.max(1, Math.ceil(filteredPosts.length / postsPerPage));
+      currentPage = Math.min(currentPage, totalPages);
+
+      if (filteredPosts.length === 0) {
+        feedEl.innerHTML = `<div class="status">No search results for "${currentQuery}" found.</div>`;
+        pageCountEl.textContent = "";
+        prevButton.disabled = true;
+        nextButton.disabled = true;
+        return;
+      }
+
+      const start = (currentPage - 1) * postsPerPage;
+      const visiblePosts = filteredPosts.slice(start, start + postsPerPage);
+
+      feedEl.innerHTML = visiblePosts
+        .map((post) => {
+          return `
+            <div class="item">
+              ${post.image ? `<img class="thumb" src="${post.image}" alt="${post.type} thumbnail" loading="lazy" />` : ""}
+              <div class="content">
+                <div class="meta">
+                  <span class="badge">${post.type}</span>
+                  <span class="date">${post.readableDate}</span>
+                </div>
+                <a class="title" href="${post.link}" target="_blank" rel="noopener noreferrer">
+                  ${post.title}
+                </a>
+              </div>
+            </div>
+          `;
+        })
+        .join("");
+
+      pageCountEl.textContent = `Page ${currentPage} of ${totalPages}`;
+      prevButton.disabled = currentPage === 1;
+      nextButton.disabled = currentPage === totalPages;
+    }
+
+    function runSearch() {
+      currentQuery = searchInput.value.trim().toLowerCase();
+      currentPage = 1;
+
+      if (!currentQuery) {
+        filteredPosts = allPosts;
+        renderPage();
+        return;
+      }
+
+      filteredPosts = allPosts.filter((post) =>
+        post.searchableText.includes(currentQuery)
+      );
+
+      renderPage();
+    }
+
+    searchButton.addEventListener("click", runSearch);
+
+    searchInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        runSearch();
+      }
+    });
+
+    clearButton.addEventListener("click", () => {
+      searchInput.value = "";
+      currentQuery = "";
+      filteredPosts = allPosts;
+      currentPage = 1;
+      renderPage();
+    });
+
+    prevButton.addEventListener("click", () => {
+      if (currentPage > 1) {
+        currentPage--;
+        renderPage();
+      }
+    });
+
+    nextButton.addEventListener("click", () => {
+      const totalPages = Math.ceil(filteredPosts.length / postsPerPage);
+      if (currentPage < totalPages) {
+        currentPage++;
+        renderPage();
+      }
+    });
+
+    loadFeed();
+  </script>
+</body>
+</html>
