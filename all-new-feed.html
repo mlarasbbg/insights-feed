@@ -33,7 +33,7 @@
 
     .filters {
       display: grid;
-      grid-template-columns: 1fr 150px 170px 150px;
+      grid-template-columns: 1fr 150px 190px 160px;
       gap: 8px;
       margin-bottom: 12px;
     }
@@ -114,13 +114,13 @@
       flex-wrap: wrap;
     }
 
-    . {
+    .badge {
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 0.02em;
       text-transform: uppercase;
       color: var(--muted);
-      background: var(---bg);
+      background: var(--badge-bg);
       padding: 3px 6px;
       border-radius: 999px;
     }
@@ -174,10 +174,6 @@
         grid-template-columns: 1fr;
       }
 
-      .item {
-        align-items: flex-start;
-      }
-
       .thumb {
         width: 72px;
         height: 72px;
@@ -205,7 +201,7 @@
     <select id="typeFilter">
       <option value="all">All types</option>
       <option value="Staff News">Staff News</option>
-      <option value="Press">Press</option>
+      <option value="Press Release">Press Release</option>
       <option value="Insight">Insight</option>
     </select>
   </div>
@@ -227,9 +223,9 @@
 
   <script>
     const insightUrl =
-      "https://sbbotanicgarden.org/wp-json/wp/v2/insight?per_page=100&_embed";
+      "https://sbbotanicgarden.org/wp-json/wp/v2/insight?per_page=20&_embed";
     const pressUrl =
-      "https://sbbotanicgarden.org/wp-json/wp/v2/press?per_page=100&_embed";
+      "https://sbbotanicgarden.org/wp-json/wp/v2/press?per_page=20&_embed";
     const staffNewsUrl =
       "https://mlarasbbg.github.io/insights-feed/sharepoint-news.json";
 
@@ -275,6 +271,7 @@
         author: "",
         department: "",
         type: typeLabel,
+        contentType: "",
         searchableText: `${title} ${excerpt} ${date} ${typeLabel}`.toLowerCase()
       };
     }
@@ -283,9 +280,14 @@
       const title = post?.title || "Untitled";
       const excerpt = post?.excerpt || "";
       const date = post?.date || "";
-      const department = post?.department || "Staff News";
+      const department = post?.department || "";
       const author = post?.author || "";
-      const type = post?.type || "Staff News";
+      const contentType = post?.contentType || "";
+
+      const type =
+        contentType.toLowerCase() === "repost page"
+          ? "Press Release"
+          : "Staff News";
 
       return {
         title,
@@ -297,11 +299,14 @@
         author,
         department,
         type,
-        searchableText: `${title} ${excerpt} ${date} ${department} ${author} ${type}`.toLowerCase()
+        contentType,
+        searchableText: `${title} ${excerpt} ${date} ${department} ${author} ${type} ${contentType}`.toLowerCase()
       };
     }
 
     function populateDepartmentFilter() {
+      departmentFilter.innerHTML = '<option value="all">All departments</option>';
+
       const departments = [...new Set(
         allPosts
           .map((post) => post.department)
@@ -329,7 +334,7 @@
         }
 
         if (!pressResponse.ok) {
-          throw new Error(`Press HTTP ${pressResponse.status}`);
+          throw new Error(`Press Release HTTP ${pressResponse.status}`);
         }
 
         if (!staffResponse.ok) {
@@ -347,7 +352,7 @@
             ? insights.map((post) => normalizeWordPressPost(post, "Insight"))
             : []),
           ...(Array.isArray(press)
-            ? press.map((post) => normalizeWordPressPost(post, "Press"))
+            ? press.map((post) => normalizeWordPressPost(post, "Press Release"))
             : []),
           ...(Array.isArray(staffNews)
             ? staffNews.map((post) => normalizeStaffPost(post))
@@ -359,7 +364,7 @@
         renderPage();
       } catch (error) {
         feedEl.innerHTML =
-          '<div class="error">Unable to load updates right now.</div>';
+          `<div class="error">Unable to load updates right now: ${error.message}</div>`;
         console.error("Feed load error:", error);
       }
     }
@@ -420,16 +425,17 @@
 
       feedEl.innerHTML = visiblePosts
         .map((post) => {
-          const primary = post.type === "Staff News"
-            ? post.department || "Staff News"
-            : post.type;
+          const primaryBadge =
+            post.type === "Staff News"
+              ? post.department || "Staff News"
+              : post.type;
 
           return `
             <div class="item">
-              ${post.image ? `<img class="thumb" src="${post.image}" alt="${primary} thumbnail" loading="lazy" />` : ""}
+              ${post.image ? `<img class="thumb" src="${post.image}" alt="${primaryBadge} thumbnail" loading="lazy" />` : ""}
               <div class="content">
                 <div class="meta">
-                  <span class="">${primaryBadge}</span>
+                  <span class="badge">${primaryBadge}</span>
                   <span class="date">${post.readableDate}</span>
                   ${post.author ? `<span class="author">By ${post.author}</span>` : ""}
                 </div>
