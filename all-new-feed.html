@@ -114,13 +114,13 @@
       flex-wrap: wrap;
     }
 
-    .badge {
+    . {
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 0.02em;
       text-transform: uppercase;
       color: var(--muted);
-      background: var(--badge-bg);
+      background: var(---bg);
       padding: 3px 6px;
       border-radius: 999px;
     }
@@ -420,17 +420,16 @@
 
       feedEl.innerHTML = visiblePosts
         .map((post) => {
-          const primaryBadge = post.type === "Staff News"
+          const primary = post.type === "Staff News"
             ? post.department || "Staff News"
             : post.type;
 
           return `
             <div class="item">
-              ${post.image ? `<img class="thumb" src="${post.image}" alt="${primaryBadge} thumbnail" loading="lazy" />` : ""}
+              ${post.image ? `<img class="thumb" src="${post.image}" alt="${primary} thumbnail" loading="lazy" />` : ""}
               <div class="content">
                 <div class="meta">
-                  <span class="badge">${primaryBadge}</span>
-                  <span class="badge">${post.type}</span>
+                  <span class="">${primaryBadge}</span>
                   <span class="date">${post.readableDate}</span>
                   ${post.author ? `<span class="author">By ${post.author}</span>` : ""}
                 </div>
