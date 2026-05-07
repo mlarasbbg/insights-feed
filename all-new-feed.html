@@ -224,8 +224,6 @@
   <script>
     const insightUrl =
       "https://sbbotanicgarden.org/wp-json/wp/v2/insight?per_page=20&_embed";
-    const pressUrl =
-      "https://sbbotanicgarden.org/wp-json/wp/v2/press?per_page=20&_embed";
     const staffNewsUrl =
       "https://mlarasbbg.github.io/insights-feed/sharepoint-news.json";
 
@@ -323,48 +321,54 @@
 
     async function loadFeed() {
       try {
-        const [insightResponse, pressResponse, staffResponse] = await Promise.all([
+        const results = await Promise.allSettled([
           fetch(insightUrl, { cache: "no-store" }),
-          fetch(pressUrl, { cache: "no-store" }),
           fetch(staffNewsUrl, { cache: "no-store" })
         ]);
-
-        if (!insightResponse.ok) {
-          throw new Error(`Insights HTTP ${insightResponse.status}`);
-        }
-
-        if (!pressResponse.ok) {
-          throw new Error(`Press Release HTTP ${pressResponse.status}`);
-        }
-
-        if (!staffResponse.ok) {
-          throw new Error(`Staff News HTTP ${staffResponse.status}`);
-        }
-
-        const [insights, press, staffNews] = await Promise.all([
-          insightResponse.json(),
-          pressResponse.json(),
-          staffResponse.json()
-        ]);
-
+    
+        const [insightResult, staffResult] = results;
+    
+        const insights =
+          insightResult.status === "fulfilled" && insightResult.value.ok
+            ? await insightResult.value.json()
+            : [];
+    
+        const staffNews =
+          staffResult.status === "fulfilled" && staffResult.value.ok
+            ? await staffResult.value.json()
+            : [];
+    
         allPosts = [
           ...(Array.isArray(insights)
-            ? insights.map((post) => normalizeWordPressPost(post, "Insight"))
+            ? insights.map((post) =>
+                normalizeWordPressPost(post, "Insight")
+              )
             : []),
-          ...(Array.isArray(press)
-            ? press.map((post) => normalizeWordPressPost(post, "Press Release"))
-            : []),
+    
           ...(Array.isArray(staffNews)
-            ? staffNews.map((post) => normalizeStaffPost(post))
+            ? staffNews.map((post) =>
+                normalizeStaffPost(post)
+              )
             : [])
         ].sort((a, b) => new Date(b.date) - new Date(a.date));
-
+    
+        if (allPosts.length === 0) {
+          feedEl.innerHTML =
+            '<div class="error">No updates could be loaded from any source.</div>';
+          return;
+        }
+    
         filteredPosts = allPosts;
+    
         populateDepartmentFilter();
+    
         renderPage();
+    
       } catch (error) {
+    
         feedEl.innerHTML =
           `<div class="error">Unable to load updates right now: ${error.message}</div>`;
+    
         console.error("Feed load error:", error);
       }
     }
