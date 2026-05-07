@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Garden Feed</title>
+  <title>Insights Feed</title>
 
   <style>
     :root {
@@ -88,7 +88,6 @@
       font-weight: 600;
       color: var(--link);
       text-decoration: none;
-      margin-bottom: 0;
     }
 
     .title:hover {
@@ -110,77 +109,50 @@
 
 <body>
   <div id="feed" class="feed">
-    <div class="status">Loading latest garden updates...</div>
+    <div class="status">Loading insights...</div>
   </div>
 
   <script>
-    const insightUrl =
+    const apiUrl =
       "https://sbbotanicgarden.org/wp-json/wp/v2/insight?per_page=5&_embed";
-    const pressUrl =
-      "https://sbbotanicgarden.org/wp-json/wp/v2/press?per_page=5&_embed";
 
     const feedEl = document.getElementById("feed");
 
-    function normalizePost(post, typeLabel) {
-      return {
-        title: post?.title?.rendered || "Untitled",
-        link: post?.link || "#",
-        date: post?.date || "",
-        type: typeLabel,
-        image: post?._embedded?.["wp:featuredmedia"]?.[0]?.source_url || ""
-      };
-    }
-
     async function loadFeed() {
       try {
-        const [insightResponse, pressResponse] = await Promise.all([
-          fetch(insightUrl, { cache: "no-store" }),
-          fetch(pressUrl, { cache: "no-store" })
-        ]);
+        const response = await fetch(apiUrl, { cache: "no-store" });
 
-        if (!insightResponse.ok) {
-          throw new Error(`Insights HTTP ${insightResponse.status}`);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
         }
 
-        if (!pressResponse.ok) {
-          throw new Error(`Press HTTP ${pressResponse.status}`);
-        }
+        const posts = await response.json();
 
-        const [insights, pressReleases] = await Promise.all([
-          insightResponse.json(),
-          pressResponse.json()
-        ]);
-
-        const merged = [
-          ...(Array.isArray(insights)
-            ? insights.map((post) => normalizePost(post, "Insight"))
-            : []),
-          ...(Array.isArray(pressReleases)
-            ? pressReleases.map((post) => normalizePost(post, "Press Release"))
-            : [])
-        ].sort((a, b) => new Date(b.date) - new Date(a.date));
-
-        if (merged.length === 0) {
-          feedEl.innerHTML = '<div class="status">No updates found.</div>';
+        if (!Array.isArray(posts) || posts.length === 0) {
+          feedEl.innerHTML = '<div class="status">No insights found.</div>';
           return;
         }
 
-        feedEl.innerHTML = merged
+        feedEl.innerHTML = posts
           .map((post) => {
-            const safeDate = post.date
+            const title = post?.title?.rendered || "Untitled";
+            const link = post?.link || "#";
+            const date = post?.date
               ? new Date(post.date).toLocaleDateString()
               : "";
+            const image =
+              post?._embedded?.["wp:featuredmedia"]?.[0]?.source_url || "";
 
             return `
               <div class="item">
-                ${post.image ? `<img class="thumb" src="${post.image}" alt="${post.type} thumbnail" />` : ""}
+                ${image ? `<img class="thumb" src="${image}" alt="Insight thumbnail" loading="lazy" />` : ""}
                 <div class="content">
                   <div class="meta">
-                    <span class="badge">${post.type}</span>
-                    <span class="date">${safeDate}</span>
+                    <span class="badge">Insight</span>
+                    <span class="date">${date}</span>
                   </div>
-                  <a class="title" href="${post.link}" target="_blank" rel="noopener noreferrer">
-                    ${post.title}
+                  <a class="title" href="${link}" target="_blank" rel="noopener noreferrer">
+                    ${title}
                   </a>
                 </div>
               </div>
@@ -189,7 +161,7 @@
           .join("");
       } catch (error) {
         feedEl.innerHTML =
-          '<div class="error">Unable to load updates right now.</div>';
+          '<div class="error">Unable to load insights right now.</div>';
         console.error("Feed load error:", error);
       }
     }
