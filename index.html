@@ -25,7 +25,7 @@
 
     :root {
       --text: #3B3B3D;
-      --muted: #5c5c5e;
+      --muted: #3B3B3D;
       --border: #e5e5e5;
       --bg: #ffffff;
     }
@@ -55,11 +55,6 @@
       gap: 16px;
       padding: 16px 0;
       border-bottom: 1px solid var(--border);
-      transition: opacity 0.15s ease;
-    }
-
-    .item:hover {
-      opacity: 0.92;
     }
 
     .item:last-child {
@@ -85,19 +80,22 @@
     .title:visited,
     .title:hover,
     .title:active,
-    .title:focus {
+    .title:focus,
+    .title:focus-visible {
       display: inline-block;
       font-size: 17px;
       line-height: 1.35;
       font-weight: 700;
       color: #3B3B3D !important;
+      -webkit-text-fill-color: #3B3B3D !important;
       text-decoration: none;
       margin-bottom: 6px;
       font-family: 'ABCFavorit', Arial, sans-serif;
-      transition: opacity 0.15s ease;
     }
 
     .title:hover {
+      color: #3B3B3D !important;
+      -webkit-text-fill-color: #3B3B3D !important;
       text-decoration: underline;
     }
 
