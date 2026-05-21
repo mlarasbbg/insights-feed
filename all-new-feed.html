@@ -284,6 +284,16 @@
       return div.textContent || div.innerText || "";
     }
 
+    function normalizeSearchText(value) {
+      return String(value || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^\w\s@.-]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
     function getWpImage(post) {
       return post?._embedded?.["wp:featuredmedia"]?.[0]?.source_url || "";
     }
@@ -304,7 +314,7 @@
         department: "",
         type: typeLabel,
         contentType: "",
-        searchableText: `${title} ${excerpt} ${date} ${typeLabel}`.toLowerCase()
+        searchableText: normalizeSearchText(`${title} ${excerpt} ${date} ${typeLabel}`)
       };
     }
 
@@ -313,7 +323,12 @@
       const excerpt = post?.excerpt || "";
       const date = post?.date || "";
       const department = post?.department || "";
-      const author = post?.author || "";
+
+      const author =
+        typeof post?.author === "object"
+          ? post?.author?.Title || post?.author?.title || post?.author?.name || post?.author?.email || ""
+          : post?.author || "";
+
       const contentType = post?.contentType || "";
 
       const type =
@@ -332,7 +347,7 @@
         department,
         type,
         contentType,
-        searchableText: `${title} ${excerpt} ${date} ${department} ${author} ${type} ${contentType}`.toLowerCase()
+        searchableText: normalizeSearchText(`${title} ${excerpt} ${date} ${department} ${author} ${type} ${contentType}`)
       };
     }
 
@@ -397,7 +412,9 @@
     }
 
     function applyFilters() {
-      currentQuery = searchInput.value.trim().toLowerCase();
+      currentQuery = normalizeSearchText(searchInput.value);
+
+      const queryTerms = currentQuery.split(" ").filter(Boolean);
       const selectedDate = dateFilter.value;
       const selectedDepartment = departmentFilter.value;
       const selectedType = typeFilter.value;
@@ -405,7 +422,8 @@
 
       filteredPosts = allPosts.filter((post) => {
         const matchesSearch =
-          !currentQuery || post.searchableText.includes(currentQuery);
+          queryTerms.length === 0 ||
+          queryTerms.every((term) => post.searchableText.includes(term));
 
         const matchesDepartment =
           selectedDepartment === "all" || post.department === selectedDepartment;
@@ -430,13 +448,22 @@
       renderPage();
     }
 
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
     function renderPage() {
       const totalPages = Math.max(1, Math.ceil(filteredPosts.length / postsPerPage));
       currentPage = Math.min(currentPage, totalPages);
 
       if (filteredPosts.length === 0) {
         const message = currentQuery
-          ? `No search results for "${currentQuery}" found.`
+          ? `No search results for "${escapeHtml(currentQuery)}" found.`
           : "No results found for the selected filters.";
 
         feedEl.innerHTML = `<div class="status">${message}</div>`;
@@ -458,20 +485,20 @@
 
           return `
             <div class="item">
-              ${post.image ? `<img class="thumb" src="${post.image}" alt="${primaryBadge} thumbnail" loading="lazy" />` : ""}
+              ${post.image ? `<img class="thumb" src="${escapeHtml(post.image)}" alt="${escapeHtml(primaryBadge)} thumbnail" loading="lazy" />` : ""}
 
               <div class="content">
                 <div class="meta">
-                  <span class="badge">${primaryBadge}</span>
-                  <span class="date">${post.readableDate}</span>
-                  ${post.author ? `<span class="author">By ${post.author}</span>` : ""}
+                  <span class="badge">${escapeHtml(primaryBadge)}</span>
+                  <span class="date">${escapeHtml(post.readableDate)}</span>
+                  ${post.author ? `<span class="author">By ${escapeHtml(post.author)}</span>` : ""}
                 </div>
 
-                <a class="title" href="${post.link}" target="_blank" rel="noopener noreferrer">
-                  ${post.title}
+                <a class="title" href="${escapeHtml(post.link)}" target="_blank" rel="noopener noreferrer">
+                  ${escapeHtml(post.title)}
                 </a>
 
-                ${post.excerpt ? `<div class="excerpt">${post.excerpt}</div>` : ""}
+                ${post.excerpt ? `<div class="excerpt">${escapeHtml(post.excerpt)}</div>` : ""}
               </div>
             </div>
           `;
